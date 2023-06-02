@@ -1,0 +1,163 @@
+;------------------------------------------------------------------------------
+; File: mfunc6JogToToolTouchOff-tt1.mac - rename to mfunc6.mac to use
+; Purpose: Tool change macro for Acorn router with TT1 in temporary location.
+; Name: Scott Pratt
+; Date: 27 Jan 2018
+; Modified: 
+; Associated SRC code: Acorn-universal.src
+; Require CNC12 4.10+
+;
+; Variables used: 
+; #100 = Reset current Z part 0 selection. 0 = skip, 1 = Reset Z0
+  #101 = 5 ;Length of time to display temporary M225 messages
+; #102 = Fast probing rate
+; #103 = Slow probing rate
+; #104 = TT1 PLC input.
+; #105 = Current user entered configuration value
+  #106 = 0 ;Length of time to wait for cycle start M225 messages
+  
+; #4006 = imperial or metric mode. 20 = imperial, 21 == metric
+
+; Parameters:
+; 11(#90011) or 44(#90044) TT1 PLC input. If only 11 is set, the value in 11 will be used.
+;                          If 44 is set, 44 will be used regardless of the value of 11. 
+; 14(#90014) Fast probing rate. Rate to probe for initial contact of TT1         
+; 15(#90015) Slow probing rate. Rate for actual measurement and retract.
+; 41(#90041) Whether the height of the tool detector stored in parameter 71 when touch is detected. 1 = Yes. 0 = No.
+; 71(#90071) This is the height of the TT1 and the Z position to set when touch is detected.
+ 
+
+;------------------------------------------------------------------------------
+
+IF #50001                         			;Force lookahead to stop processing 
+IF #4201 || #4202 THEN GOTO 1000   			;Skip when graphing or searching
+IF #50001                         			;Force lookahead to stop processing 
+
+#100 = 0
+#102 = 0
+#103 = 0
+#104 = 0
+#105 = 0
+
+
+M5                                          ;Turn off spindle
+
+N100                                        ;Check to make sure a TT1 is correctly configured
+                                            ;Check for PLC input
+;If check if either parameter 11 or parameter 44 are > 0											
+IF !#9011 && !#9044 THEN M225 #106 "No PLC input has been configured for the Tool Touch Off device.\nPlease enter the PLC input for the Tool Touch Off device in parameter 11\nPress Cycle Cancel to end job now."
+IF #50001                         			;Force lookahead to stop processing
+IF !#9011 && !#9044 THEN GOTO 100
+
+;Check if current plc input set in parameter 44 is between 1 & 8 if it is less <= 50000
+IF [#9044 > 8] && [#9044 <= 50000] THEN M225 #106 "The PLC input entered into parameter 44 in invalid.\nPlease enter a value of between 1 and 8 into parameter 44\nPress Cycle Cancel to end job now."
+IF #50001                         			;Force lookahead to stop processing
+IF [#9044 > 8] && [#9044 <= 50000] THEN GOTO 100
+IF #50001                       			;Force lookahead to stop processing
+
+;If parameter 44 is != 0 && < 50000, check if current plc input set in parameter 44 is between 1 & 8
+IF [[#9044 != 0] && [#9044 < 50000]] && [[#9044 < 1] || [#9044 > 8]] THEN M225 #106 "The PLC input entered into parameter 44 in invalid.\nPlease enter a value of between 1 and 8 into parameter 44\nPress Cycle Cancel to end job now."
+IF #50001                         			;Force lookahead to stop processing
+IF [[#9044 != 0] && [#9044 < 50000]] && [[#9044 < 1] || [#9044 > 8]] THEN GOTO 100
+IF #50001
+
+;If parameter 44 is != 0 && >= 50000, check if current plc input set in parameter 44 is between 50001 & 50008
+IF [[#9044 != 0] && [#9044 >= 50000]] && [[#9044 < 50001] || [#9044 > 50008]] THEN M225 #106 "The PLC input entered into parameter 44 in invalid.\nPlease enter a value of between 1 and 8 into parameter 44\nPress Cycle Cancel to end job now."
+IF #50001                         			;Force lookahead to stop processing
+IF  [[#9044 != 0] && [#9044 >= 50000]] && [[#9044 < 50001] || [#9044 > 50008]] THEN GOTO 100
+IF #50001                         			;Force lookahead to stop processing
+
+;If parameter 44 = 0 && parameter 11 < 50000, check if current plc input set in parameter 11 is between 1 & 8 if it is less <= 50000
+IF [#9044 == 0] && [#9011 < 50000] && [[#9011 < 1] || [#9011 > 8]] THEN M225 #106 "The PLC input entered into parameter 11 in invalid.\nPlease enter a value of between 1 and 8 into parameter 11\nPress Cycle Cancel to end job now." 
+IF #50001                         			;Force lookahead to stop processing
+IF [#9044 == 0] && [#9011 < 50000] && [[#9011 < 1] || [#9011 > 8]] THEN GOTO 100
+
+;If parameter 44 = 0 && parameter 11 >= 50000, check if current plc input set in parameter 11 is between 50001 & 50008
+IF [#9044 == 0] && [#9011 >= 50000] && [[#9011 < 50001] || [#9011 > 50008]] THEN M225 #106 "The PLC input entered into parameter 11 in invalid.\nPlease enter a value of between 1 and 8 into parameter 11\nPress Cycle Cancel to end job now." 
+IF #50001                         			;Force lookahead to stop processing
+IF [#9044 == 0] && [#9011 >= 50000] && [[#9011 < 50001] || [#9011 > 50008]] THEN GOTO 100
+IF #50001                         			;Force lookahead to stop processing
+
+                                            ;Check that touch off device height has been set
+IF #9071 == 0 THEN M225 #106 "The height for the tool touch off device has not been set in parameter 71.\nPlease measure the height of your tool touch off device and enter it parameter 71\nPress Cycle Cancel to end job now."		
+IF #50001                         			;Force lookahead to stop processing
+IF #9071 == 0 THEN GOTO 100									
+
+IF #50001                         			;Force lookahead to stop processing
+IF #9044 != 0 THEN #104 = #9044             ;Set TT1 input to value in parameter 44 if it's not = to 0.  
+IF #50001                         			;Force lookahead to stop processing
+IF #9044 == 0 THEN #104 = #9011             ;Set TT1 input to value in parameter 11 if parameter 44 = 0.             
+IF #50001                         			;Force lookahead to stop processing
+
+IF #104 > 50000 THEN #104 = #104 - 50000
+IF #50001                         			;Force lookahead to stop processing
+                                            ;Check/set probing rates
+IF [#9014 == 0] && [#4006 == 20] THEN #102 = 10                ;If fast probing rate = 0, set to default 10"/min
+IF #50001                         			;Force lookahead to stop processing
+IF [#9014 != 0] && [#4006 == 20] THEN #102 = #9014             ;If fast probing rate != 0, set to value in #9014
+IF #50001                         			;Force lookahead to stop processing
+
+IF [#9014 == 0] && [#4006 == 21] THEN #102 = 254      ;If fast probing rate = 0, set to default 254mm/min
+IF #50001                         			;Force lookahead to stop processing
+IF [#9014 != 0] && [#4006 == 21] THEN #102 = #9014    ;If fast probing rate != 0, set to value in #9014
+IF #50001                         			;Force lookahead to stop processing
+
+IF [#9015 == 0] && [#4006 == 20] THEN #103 = 1        ;If slow probing rate = 0, set to default 1"/min
+IF #50001 
+IF [#9015 != 0] && [#4006 == 20] THEN #103 = 1        ;If slow probing rate != 0, set to value in #9015
+IF #50001 
+                        			;Force lookahead to stop processing	
+IF [#9015 == 0] && [#4006 == 21] THEN #103 = 25.4        ;If slow probing rate = 0, set to default 25.4 mm/min
+IF #50001                         			;Force lookahead to stop processing
+IF [#9015 != 0] && [#4006 == 21] THEN #103 = 25.4        ;If slow probing rate != 0, set to value in #9015
+IF #50001                         			;Force lookahead to stop processing
+
+N150
+
+G28
+
+M225 #106 "#)Please change tool to tool #%.0f\nPress Cycle Start to continue" #4120
+
+
+N200                                        ;Prompt user for resetting Z0 position
+
+M224 #100 "#)Would you like to reset the current Z0 position?\n#)Press 0 to continue without resetting Z0\n#)Press 1 to auto reset current Z0, via probe"
+IF #50001                         			;Force lookahead to stop processing
+IF #100 == 0 THEN GOTO 400                  ;Skip if user chose not to reset Z0 
+IF #50001                         			;Force lookahead to stop processing
+IF #100 == 1  THEN GOTO 250                 ;Go to Z-Probe prompts 
+;IF #50001                         			;Force lookahead to stop processing
+;IF #100 == 2 THEN GOTO 275                  :Go to by-hand Z-0
+IF #50001                         			;Force lookahead to stop processing
+IF #100 > 1 THEN GOTO 200                   ;Go back to prompt user if invalid value was selected
+
+N250										;Prompt to put clamp om
+
+M200 "#)Jog the cutter over top of the Tool Touch Off\nPress Cycle Start to continue"
+
+N300                                        ;Probe TT1
+										
+M115 /Z P[#104] F[#102]                     ;Move at fast probing rate until TT1 detected
+G91 Z#9013 F[#102]                          ;Move up the distance set in P13.
+M115 /Z P[#104]F[#103]                      ;Move at slow probing rate until TT1 detected
+G90
+                                        
+G92 Z[#9071]                                ;Set Z position to 0 + detector height stored in parameter 71 - material thickness 
+G4 P1                                       ;Wait 1 second
+G53 Z0                                      ;Retract Z
+ 
+M225 #106 "#)Z0 position set \nPress Cycle Start to continue" 
+GOTO 400
+
+;N275                                        ;Prompt and set Z0 by manual jog
+
+;M200 "#)Jog the cutter to Z-0 point\nPress Cycle Start to continue"
+
+;G92 Z0                                      ;Set Z position to 0
+;G4 P1                                       ;Wait 1 second
+;G53 Z0                                      ;Retract Z
+
+N400 									
+IF #50001                         			;Force lookahead to stop processing
+				
+N1000                                       ;End of macro  
