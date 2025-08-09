@@ -32,6 +32,7 @@ N100                             ;Insert your code between N100 and N1000
 ; #104 = TT1 PLC input.
 ; #105 = Current user entered configuration value
   #106 = 0 ;Length of time to wait for cycle start M225 messages
+; #107 = absolute Z position at macro start (for return at end)
   
 ; #4006 = imperial or metric mode. 20 = imperial, 21 == metric
 
@@ -55,6 +56,7 @@ IF #50001                         			;Force lookahead to stop processing
 #103 = 0
 #104 = 0
 #105 = 0
+#107 = #5023								; store machine (absolute) Z value for later return
 
 
 M5                                          ;Turn off spindle
@@ -142,9 +144,9 @@ G90
                                         
 G92 Z[#9071]                                ;Set Z position to 0 + detector height stored in parameter 71 - material thickness 
 G4 P1                                       ;Wait 1 second
-G53 Z0                                      ;Retract Z
+G53 Z#107                                      ;Retract Z
  
-M225 #106 "#)Touch off completed! \nPress Cycle Start to continue" 
+M225 #101 "#)Touch off completed! \nPress Cycle Start to continue" 
 
 N400 									
 IF #50001                         			;Force lookahead to stop processing

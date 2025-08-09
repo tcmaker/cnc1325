@@ -115,14 +115,15 @@ IF #50001                         			;Force lookahead to stop processing
 N150
 
 ;Inform user what this macro does
-M200 "#)M56 will resurface the spoilboard using the following parameters:\n    2'' Diameter bit\n    18000RPM\n    250IPM\n    0.020'' depth below Z0\nPress Cycle Start to Continue"
+M200 "#)M56 will resurface the spoilboard using the following parameters:\n    3.25'' Diameter bit\n    14000RPM\n    350IPM\n    0.020'' depth below Z0\nPress Cycle Start to Continue"
+; M200 "#)M56 will resurface the spoilboard using the following parameters:\n    2.0'' Diameter bit\n    18000RPM\n    250IPM\n    0.020'' depth below Z0\nPress Cycle Start to Continue"
 
 G28
-G92 X0 Y0			;Set work zero to 0,0 at machine coords 0,0
+G92 X-1.635 Y-0.7			;Set work zero to x,y at machine coords 0,0
 
 N400 									
 IF #50001                         			;Force lookahead to stop processing
 
-M98 "C:\cncm\surfacespoilboardf360.nc" L0000
+M98 "C:\cncm\surfacespoilboardf360_new.nc" L0000
 				
 N1000                                       ;End of macro  
